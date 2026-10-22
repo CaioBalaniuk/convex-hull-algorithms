@@ -1,5 +1,4 @@
 import sys
-import subprocess
 import matplotlib.pyplot as plt
 
 
@@ -23,41 +22,35 @@ def get_data_from_c():
             f"Choose from: {', '.join(ALGORITHM_NAMES)}"
         )
 
-    result = subprocess.run(
-        [".\\hull.exe", algorithm],
-        capture_output=True,
-        text=True,
-        check=True
-    )
-
     points = []
     hull = []
     section = None
 
-    for line in result.stdout.splitlines():
-        line = line.strip()
+    with open("hull_data.txt", "r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
 
-        if line == "POINTS":
-            section = "points"
-            continue
+            if line == "POINTS":
+                section = "points"
+                continue
 
-        if line == "HULL":
-            section = "hull"
-            continue
+            if line == "HULL":
+                section = "hull"
+                continue
 
-        if section in ("points", "hull") and line:
-            x, y = map(float, line.split())
+            if section in ("points", "hull") and line:
+                x, y = map(float, line.split())
 
-            if section == "points":
-                points.append((x, y))
-            else:
-                hull.append((x, y))
+                if section == "points":
+                    points.append((x, y))
+                else:
+                    hull.append((x, y))
 
     if not points:
-        raise ValueError("No input points found in C output.")
+        raise ValueError("No input points found in hull_data.txt.")
 
     if not hull:
-        raise ValueError("No hull vertices found in C output.")
+        raise ValueError("No hull vertices found in hull_data.txt.")
 
     return algorithm, points, hull
 
@@ -65,46 +58,83 @@ def get_data_from_c():
 def plot_hull(algorithm, points, hull):
     name = ALGORITHM_NAMES[algorithm]
 
-    plt.figure(figsize=(9, 7))
+    # Clean, readable figure
+    fig, ax = plt.subplots(figsize=(10, 7), dpi=120)
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
 
     xs, ys = zip(*points)
 
-    plt.scatter(
+    # Input points: small and transparent
+    ax.scatter(
         xs, ys,
+        s=9,
         color="steelblue",
-        s=65,
-        label="Input points"
+        alpha=0.25,
+        edgecolors="none",
+        label=f"Input points (n={len(points)})",
+        rasterized=True,
+        zorder=1
     )
 
-    for x, y in points:
-        plt.annotate(
-            f"({x:g}, {y:g})",
-            (x, y),
-            xytext=(5, 5),
-            textcoords="offset points",
-            fontsize=8
-        )
-
+    # Draw the convex hull without filling its interior
     if len(hull) >= 2:
         closed_hull = hull + [hull[0]]
         hx, hy = zip(*closed_hull)
 
-        plt.plot(
+        ax.plot(
             hx, hy,
             color="crimson",
             linewidth=2,
-            marker="o",
-            markersize=6,
-            label=f"{name} hull"
+            label=f"{name} hull (h={len(hull)})",
+            zorder=3
         )
 
-    plt.title(f"Convex Hull - {name}")
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.grid(True, linestyle="--", alpha=0.4)
-    plt.axis("equal")
-    plt.legend()
-    plt.tight_layout()
+        # Highlight the actual hull vertices
+        hull_x, hull_y = zip(*hull)
+
+        ax.scatter(
+            hull_x, hull_y,
+            s=30,
+            color="crimson",
+            edgecolors="white",
+            linewidths=0.7,
+            zorder=4
+        )
+
+    ax.set_title(
+        f"Convex Hull — {name}",
+        fontsize=15,
+        fontweight="bold",
+        pad=14
+    )
+    ax.set_xlabel("x", fontsize=11)
+    ax.set_ylabel("y", fontsize=11)
+
+    # Subtle grid and clean axes
+    ax.grid(
+        True,
+        linestyle="--",
+        linewidth=0.6,
+        alpha=0.25
+    )
+    ax.set_axisbelow(True)
+    ax.set_aspect("equal", adjustable="box")
+    ax.margins(0.04)
+
+    # Remove unnecessary visual clutter
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.legend(
+        loc="best",
+        frameon=True,
+        framealpha=0.95,
+        edgecolor="lightgray",
+        fontsize=9
+    )
+
+    fig.tight_layout()
     plt.show()
 
 
