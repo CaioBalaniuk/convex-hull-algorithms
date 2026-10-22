@@ -79,7 +79,7 @@ int main(void)
 
     int size_jarvis, size_andrews, size_graham;
 
-    /* Generate reproducible random points. */
+    // Generate reproducible random points
     srand(42);
 
     for (int i = 0; i < N; i++) {
